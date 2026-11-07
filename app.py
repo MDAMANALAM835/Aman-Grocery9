@@ -1,6 +1,18 @@
+
 from flask import Flask, render_template
+import boto3
 
 app = Flask(__name__)
+
+# AWS S3 configuration
+S3_BUCKET = "grocerybucket2026"
+S3_REGION = "ap-southeast-2"
+
+# Connect to S3 using your EC2 IAM role
+s3 = boto3.client(
+    "s3",
+    region_name=S3_REGION
+)
 
 products = [
     {
@@ -37,18 +49,27 @@ products = [
     }
 ]
 
-
 @app.route("/")
 def home():
+
+    for product in products:
+        product["image_url"] = s3.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": S3_BUCKET,
+                "Key": "images/" + product["image"]
+            },
+            ExpiresIn=3600
+        )
+
     return render_template(
         "index.html",
         products=products
     )
 
-
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=5000,
-        debug=True
+        debug=False
     )
